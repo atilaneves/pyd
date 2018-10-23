@@ -217,11 +217,23 @@ struct DClass_Py_Mapping {
 /// We use malloc for the container's structure because we can't use the GC
 /// inside a destructor and we need to use this container there.
 template reference_container(Mapping) {
-    alias MultiIndexContainer!(Mapping, IndexedBy!(
-                HashedUnique!("a.d"), "d",
-                HashedUnique!("a.py"), "python"),
+    static if(is(Mapping == DStruct_Py_Mapping)) {
+        // See #104 for the reason for the hash functions below
+        alias MultiIndexContainer!(
+            Mapping,
+            IndexedBy!(
+                HashedNonUnique!("a.d", "cast(size_t) *cast(const void**) &a"), "d",
+                HashedUnique!("a.py", "cast(size_t) *cast(const void**) &a"), "python"
+                ),
             MallocAllocator, MutableView)
-        Container;
+            Container;
+    }else{
+        alias MultiIndexContainer!(Mapping, IndexedBy!(
+                    HashedUnique!("a.d"), "d",
+                    HashedUnique!("a.py"), "python"),
+                MallocAllocator, MutableView)
+            Container;
+    }
     Container _reference_container = null;
 
     @property reference_container() {
@@ -413,4 +425,3 @@ PyObject* wrap_d_object(T)(T t, PyTypeObject* type = null) {
         return null;
     }
 }
-
